@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Languages, Play, Pause, Heart, Send, Sparkles, Star, Music, ArrowRight, ArrowLeft, Menu, Disc, MessageSquare, Volume2, VolumeX, History, Mic2, MessageCircle, Reply, Globe } from 'lucide-react';
+import { Languages, Play, Pause, Heart, Send, Sparkles, Star, Music, ArrowRight, ArrowLeft, Menu, Disc, MessageSquare, Volume2, VolumeX, History, Mic2, MessageCircle, Reply, Globe, Users, Smile, Check, X, UserPlus, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactPlayer from 'react-player';
 import BackgroundMusic from './BackgroundMusic';
@@ -9,6 +9,32 @@ import { GoogleGenAI } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 const Player = ReactPlayer as any;
+
+type User = {
+  id: number;
+  username: string;
+  avatar: string;
+  joinDate: string;
+  isFan: boolean;
+};
+
+type FriendRequest = {
+  id: number;
+  fromUserId: number;
+  fromUsername: string;
+  fromAvatar: string;
+  toUserId: number;
+  status: 'pending' | 'accepted' | 'rejected';
+  timestamp: string;
+};
+
+type Friendship = {
+  userId: number;
+  username: string;
+  avatar: string;
+  joinDate: string;
+  becameFriendsDate: string;
+};
 
 type CommentType = {
   id: number;
@@ -21,6 +47,15 @@ type CommentType = {
   replies: { id: number; author: string; text: string; time: string; translatedText?: string }[];
   translatedText?: string;
   isTranslating?: boolean;
+};
+
+type ChatMessage = {
+  id: number;
+  author: string;
+  avatar: string;
+  text: string;
+  time: string;
+  color: string;
 };
 
 const TRANSLATIONS = {
@@ -69,6 +104,12 @@ const TRANSLATIONS = {
     translate: "翻译",
     translating: "翻译中...",
     original: "原文",
+    chatChannel: "粉丝聊天",
+    chatTitle: "粉丝聊天频道",
+    chatSubtitle: "和全世界的粉丝们一起欢乐聊天！✨",
+    chatPlaceholder: "分享你对 Mona 的想法吧...💬",
+    onlineUsers: "在线粉丝",
+    sendMessage: "发送",
     songs: [
       { title: '私、アイドル宣言', desc: '最初的偶像宣言！一起享受舞台吧。', tag: '经典·出道' },
       { title: 'ファンサ', desc: '用实力获胜！最棒的饭撒送给你。', tag: '百万热门' },
@@ -122,6 +163,12 @@ const TRANSLATIONS = {
     translate: "翻訳",
     translating: "翻訳中...",
     original: "原文",
+    chatChannel: "ファンチャット",
+    chatTitle: "ファンチャットルーム",
+    chatSubtitle: "世界中のファンと一緒に楽しくチャット！✨",
+    chatPlaceholder: "Monaちゃんへの想いをシェアしよう...💬",
+    onlineUsers: "オンラインファン",
+    sendMessage: "送信",
     songs: [
       { title: '私、アイドル宣言', desc: '最強アイドルの甘えん坊宣言！ハートを感じて。', tag: 'デビュー曲' },
       { title: 'ファンサ', desc: '実力で心をつかむ！最高のファンサをあなたに。', tag: 'ミリオンヒット' },
@@ -175,6 +222,12 @@ const TRANSLATIONS = {
     translate: "Translate",
     translating: "Translating...",
     original: "Original",
+    chatChannel: "Fan Chat",
+    chatTitle: "Fan Chat Channel",
+    chatSubtitle: "Chat with fans around the world! ✨",
+    chatPlaceholder: "Share your thoughts about Mona...💬",
+    onlineUsers: "Online Fans",
+    sendMessage: "Send",
     songs: [
       { title: 'Watashi, Idol Sengen', desc: 'The first idol declaration! Enjoy the stage.', tag: 'Debut' },
       { title: 'Fansa', desc: 'Winning hearts with skill! The best fanservice.', tag: 'Million Hit' },
@@ -228,6 +281,12 @@ const TRANSLATIONS = {
     translate: "번역",
     translating: "번역 중...",
     original: "원문",
+    chatChannel: "팬 채팅",
+    chatTitle: "팬 채팅 채널",
+    chatSubtitle: "세계의 팬들과 함께 즐거운 채팅! ✨",
+    chatPlaceholder: "모나에 대한 생각을 공유해요...💬",
+    onlineUsers: "온라인 팬",
+    sendMessage: "전송",
     songs: [
       { title: '나, 아이돌 선언', desc: '최강 아이돌의 첫 선언! 하트를 느껴봐.', tag: '데뷔곡' },
       { title: '팬서비스', desc: '실력으로 쟁취한다! 최고의 팬서비스를 당신에게.', tag: '밀리언 히트' },
@@ -306,6 +365,31 @@ const INITIAL_COMMENTS: CommentType[] = [
   { id: 11, author: 'Sari_ID', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Sari&backgroundColor=d9f99d', text: 'Mona-chan semangat terus ya! Suaramu sangat indah.', time: '22小时前', likes: 67, liked: false, replies: [] },
   { id: 12, author: 'Emma_UK', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Emma&backgroundColor=fbcfe8', text: 'Can\'t wait for your next concert! You are a star! 🌟', time: '1天前', likes: 204, liked: false, replies: [] },
 ];
+
+const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
+  { id: 1, author: 'Mona_Love', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=MonaLove&backgroundColor=ffdfbf', text: '大家好呀！今天也要开心哦～✨', time: '10:30' },
+  { id: 2, author: 'Star_Fan', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=StarFan&backgroundColor=ffc8dd', text: 'Mona酱今天的直播太棒了！', time: '10:45' },
+  { id: 3, author: 'Happy_Smile', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Happy&backgroundColor=bbf7d0', text: '新歌出来了吗？等不及了～', time: '11:00' },
+  { id: 4, author: 'Dream_Chaser', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Dream&backgroundColor=bfdbfe', text: '大家支持Mona，我们一起加油！💪', time: '11:15' },
+  { id: 5, author: 'Music_Lover', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Music&backgroundColor=fef08a', text: '这个频道真的很温暖呢～', time: '11:30' },
+];
+
+// 初始粉丝列表
+const INITIAL_FANS: User[] = [
+  { id: 1, username: 'Hina_Chan', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Hina&backgroundColor=ffdfbf', joinDate: '2023-01-15', isFan: true },
+  { id: 2, username: 'IdolFan99', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Ken&backgroundColor=ffc8dd', joinDate: '2023-02-20', isFan: true },
+  { id: 3, username: 'K-PopLover', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Jimin&backgroundColor=bbf7d0', joinDate: '2023-03-10', isFan: true },
+  { id: 4, username: 'Alex_US', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Alex&backgroundColor=bfdbfe', joinDate: '2023-04-05', isFan: true },
+  { id: 5, username: 'Maria_Esp', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Maria&backgroundColor=fef08a', joinDate: '2023-05-12', isFan: true },
+  { id: 6, username: 'Yuki_JP', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Yuki&backgroundColor=fbcfe8', joinDate: '2023-06-08', isFan: true },
+  { id: 7, username: 'Chen_CN', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Chen&backgroundColor=a7f3d0', joinDate: '2023-07-22', isFan: true },
+  { id: 8, username: 'Emma_UK', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Emma&backgroundColor=fbcfe8', joinDate: '2023-08-15', isFan: true },
+  { id: 9, username: 'Thiago_BR', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Thiago&backgroundColor=fed7aa', joinDate: '2023-09-03', isFan: true },
+  { id: 10, username: 'Anna_RU', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Anna&backgroundColor=fda4af', joinDate: '2023-10-11', isFan: true },
+  { id: 11, username: 'Pierre_FR', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Pierre&backgroundColor=ddd6fe', joinDate: '2023-11-20', isFan: true },
+  { id: 12, username: 'Sari_ID', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Sari&backgroundColor=d9f99d', joinDate: '2023-12-08', isFan: true },
+];
+
 
 
 function FallingStars() {
@@ -433,6 +517,114 @@ function FanSiteBadge({ text }: { text: string }) {
     </div>
   );
 }
+
+// 用户登录模态框组件
+function UserLoginModal({ onLoginSuccess }: { onLoginSuccess: (username: string) => void }) {
+  const [tempUsername, setTempUsername] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = tempUsername.trim();
+    if (!trimmed) {
+      setError('请输入用户名');
+      return;
+    }
+    if (trimmed.length > 20) {
+      setError('用户名不能超过20个字符');
+      return;
+    }
+    onLoginSuccess(trimmed);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[250] flex items-center justify-center p-4"
+    >
+      <div className="bg-gradient-to-br from-white to-pink-50 rounded-[2rem] border-4 border-pink-300 shadow-2xl shadow-pink-200 max-w-md w-full p-8">
+        <h2 className="font-black text-2xl md:text-3xl text-pink-600 mb-2 text-center">加入粉丝社区</h2>
+        <p className="text-center text-pink-900 text-sm md:text-base mb-6 font-bold">设置你的用户名开始冒险吧！✨</p>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <input
+              type="text"
+              placeholder="输入用户名 (最多20个字符)"
+              value={tempUsername}
+              onChange={(e) => {
+                setTempUsername(e.target.value);
+                setError('');
+              }}
+              className="w-full px-4 py-3 rounded-xl border-2 border-pink-200 focus:outline-none focus:border-pink-500 bg-white/50 font-bold text-pink-950 placeholder:text-pink-300"
+              maxLength={20}
+            />
+            {error && <p className="text-red-500 text-sm font-bold mt-2">{error}</p>}
+          </div>
+          
+          <button
+            type="submit"
+            className="w-full bg-gradient-to-br from-pink-400 to-pink-500 hover:from-pink-500 hover:to-pink-600 text-white font-black py-3 rounded-xl transition-all transform active:scale-95 shadow-lg shadow-pink-300 uppercase tracking-widest"
+          >
+            进入社区
+          </button>
+        </form>
+      </div>
+    </motion.div>
+  );
+}
+
+// 好友请求通知组件
+function FriendRequestNotification({ 
+  request, 
+  onAccept, 
+  onReject 
+}: { 
+  request: FriendRequest; 
+  onAccept: (requestId: number) => void; 
+  onReject: (requestId: number) => void;
+}) {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      className="bg-white border-2 border-pink-200 rounded-xl p-3 md:p-4 shadow-lg flex items-center gap-3"
+    >
+      <img 
+        src={request.fromAvatar} 
+        alt={request.fromUsername}
+        className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-pink-200"
+      />
+      <div className="flex-1 min-w-0">
+        <p className="font-black text-pink-950 text-sm md:text-base truncate">{request.fromUsername}</p>
+        <p className="text-xs text-pink-600 font-bold">发送了好友请求</p>
+      </div>
+      <div className="flex gap-2">
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => onAccept(request.id)}
+          className="w-8 h-8 md:w-10 md:h-10 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center font-bold transition-colors"
+        >
+          <Check className="w-4 h-4 md:w-5 md:h-5" />
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => onReject(request.id)}
+          className="w-8 h-8 md:w-10 md:h-10 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center font-bold transition-colors"
+        >
+          <X className="w-4 h-4 md:w-5 md:h-5" />
+        </motion.button>
+      </div>
+    </motion.div>
+  );
+}
+
 
 
 function MicCartoon({ className }: { className?: string }) {
@@ -587,6 +779,216 @@ const FINALE_LYRICS = [
   "ラブ！💕"
 ];
 
+// 粉丝列表和好友管理面板
+function FriendsPanel({ 
+  allFans, 
+  friends, 
+  currentUser, 
+  friendRequests,
+  sentRequests,
+  onSendFriendRequest, 
+  onAcceptRequest, 
+  onRejectRequest,
+  onRemoveFriend
+}: { 
+  allFans: User[]; 
+  friends: Friendship[];
+  currentUser: User | null;
+  friendRequests: FriendRequest[];
+  sentRequests: FriendRequest[];
+  onSendFriendRequest: (toUserId: number) => void;
+  onAcceptRequest: (requestId: number) => void;
+  onRejectRequest: (requestId: number) => void;
+  onRemoveFriend: (userId: number) => void;
+}) {
+  const [activeTab, setActiveTab] = useState<'fans' | 'friends' | 'requests'>('fans');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredFans = allFans.filter(fan => 
+    fan.username.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    fan.id !== currentUser?.id &&
+    !friends.some(f => f.userId === fan.id)
+  );
+
+  return (
+    <div className="bg-gradient-to-br from-pink-50 to-white rounded-[2rem] border-3 border-pink-200 shadow-xl shadow-pink-100 p-4 md:p-6 max-h-[70vh] overflow-hidden flex flex-col">
+      {/* 标签栏 */}
+      <div className="flex gap-2 mb-4 border-b-2 border-pink-100 pb-3">
+        <button
+          onClick={() => setActiveTab('fans')}
+          className={`px-4 py-2 font-black text-sm md:text-base rounded-lg transition-all transform ${
+            activeTab === 'fans' 
+              ? 'bg-pink-500 text-white shadow-lg shadow-pink-300 scale-105' 
+              : 'bg-white text-pink-600 hover:bg-pink-50'
+          }`}
+        >
+          粉丝列表
+        </button>
+        <button
+          onClick={() => setActiveTab('friends')}
+          className={`px-4 py-2 font-black text-sm md:text-base rounded-lg transition-all transform ${
+            activeTab === 'friends' 
+              ? 'bg-pink-500 text-white shadow-lg shadow-pink-300 scale-105' 
+              : 'bg-white text-pink-600 hover:bg-pink-50'
+          }`}
+        >
+          好友 ({friends.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('requests')}
+          className={`px-4 py-2 font-black text-sm md:text-base rounded-lg transition-all transform relative ${
+            activeTab === 'requests' 
+              ? 'bg-pink-500 text-white shadow-lg shadow-pink-300 scale-105' 
+              : 'bg-white text-pink-600 hover:bg-pink-50'
+          }`}
+        >
+          请求 {friendRequests.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-black rounded-full w-5 h-5 flex items-center justify-center">{friendRequests.length}</span>}
+        </button>
+      </div>
+
+      {/* 搜索框 - 仅在粉丝列表显示 */}
+      {activeTab === 'fans' && (
+        <input
+          type="text"
+          placeholder="搜索粉丝..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full px-3 py-2 mb-3 rounded-lg border-2 border-pink-200 focus:outline-none focus:border-pink-500 bg-white/50 font-bold text-pink-950 placeholder:text-pink-300 text-sm md:text-base"
+        />
+      )}
+
+      {/* 内容区域 */}
+      <div className="flex-1 overflow-y-auto space-y-2 md:space-y-3">
+        {activeTab === 'fans' && (
+          <>
+            {filteredFans.length === 0 ? (
+              <div className="text-center py-8 text-pink-600 font-bold">
+                {searchQuery ? '未找到匹配的粉丝' : '没有更多粉丝了'}
+              </div>
+            ) : (
+              filteredFans.map((fan) => (
+                <motion.div
+                  key={fan.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="bg-white border-2 border-pink-100 rounded-xl p-3 flex items-center justify-between hover:shadow-lg transition-all"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <img 
+                      src={fan.avatar} 
+                      alt={fan.username}
+                      className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-pink-200 flex-shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-black text-pink-950 text-sm md:text-base truncate">{fan.username}</p>
+                      <p className="text-xs text-pink-600 font-bold">加入于 {fan.joinDate}</p>
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => onSendFriendRequest(fan.id)}
+                    className="bg-pink-500 hover:bg-pink-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg font-black text-sm md:text-base flex items-center gap-2 whitespace-nowrap ml-2"
+                  >
+                    <UserPlus className="w-4 h-4" /> 添加
+                  </motion.button>
+                </motion.div>
+              ))
+            )}
+          </>
+        )}
+
+        {activeTab === 'friends' && (
+          <>
+            {friends.length === 0 ? (
+              <div className="text-center py-8 text-pink-600 font-bold">
+                还没有好友，快去添加吧！✨
+              </div>
+            ) : (
+              friends.map((friend) => (
+                <motion.div
+                  key={friend.userId}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="bg-white border-2 border-green-100 rounded-xl p-3 flex items-center justify-between hover:shadow-lg transition-all"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <img 
+                      src={friend.avatar} 
+                      alt={friend.username}
+                      className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-green-200 flex-shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-black text-pink-950 text-sm md:text-base truncate">{friend.username}</p>
+                      <p className="text-xs text-green-600 font-bold">成为好友于 {friend.becameFriendsDate}</p>
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => onRemoveFriend(friend.userId)}
+                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg font-black text-sm ml-2 whitespace-nowrap"
+                  >
+                    删除
+                  </motion.button>
+                </motion.div>
+              ))
+            )}
+          </>
+        )}
+
+        {activeTab === 'requests' && (
+          <>
+            {friendRequests.length === 0 && sentRequests.length === 0 ? (
+              <div className="text-center py-8 text-pink-600 font-bold">
+                没有好友请求
+              </div>
+            ) : (
+              <>
+                {friendRequests.length > 0 && (
+                  <>
+                    <h4 className="font-black text-pink-600 text-sm md:text-base mb-2">收到的请求</h4>
+                    {friendRequests.map((request) => (
+                      <FriendRequestNotification
+                        key={request.id}
+                        request={request}
+                        onAccept={onAcceptRequest}
+                        onReject={onRejectRequest}
+                      />
+                    ))}
+                  </>
+                )}
+                {sentRequests.length > 0 && (
+                  <>
+                    <h4 className="font-black text-pink-600 text-sm md:text-base mt-4 mb-2">发送的请求</h4>
+                    {sentRequests.map((request) => (
+                      <div
+                        key={request.id}
+                        className="bg-white border-2 border-yellow-200 rounded-xl p-3 md:p-4 flex items-center gap-3"
+                      >
+                        <img 
+                          src={request.fromAvatar} 
+                          alt={request.fromUsername}
+                          className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-yellow-200"
+                        />
+                        <div className="flex-1">
+                          <p className="font-black text-pink-950 text-sm md:text-base">{request.fromUsername}</p>
+                          <p className="text-xs text-yellow-600 font-bold">待对方应答</p>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 function InteractiveFinale() {
   const [clicks, setClicks] = useState(0);
   
@@ -678,6 +1080,15 @@ export default function App() {
 
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  
+  // 好友系统状态
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(true);
+  const [allFans, setAllFans] = useState<User[]>(INITIAL_FANS);
+  const [friends, setFriends] = useState<Friendship[]>([]);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [sentRequests, setSentRequests] = useState<FriendRequest[]>([]);
+  const [showFriendsPanel, setShowFriendsPanel] = useState(false);
 
   // Click outside listener for menus
   useEffect(() => {
@@ -709,6 +1120,91 @@ export default function App() {
     setLangMenuOpen(false);
   };
 
+  // 处理用户登录
+  const handleUserLogin = (username: string) => {
+    const newUser: User = {
+      id: Date.now(),
+      username,
+      avatar: `https://api.dicebear.com/7.x/miniavs/svg?seed=${username}&backgroundColor=${['ffdfbf', 'ffc8dd', 'bbf7d0', 'bfdbfe'][Math.floor(Math.random() * 4)]}`,
+      joinDate: new Date().toISOString().split('T')[0],
+      isFan: true
+    };
+    setCurrentUser(newUser);
+    setShowLoginModal(false);
+  };
+
+  // 发送好友请求
+  const handleSendFriendRequest = (toUserId: number) => {
+    if (!currentUser) return;
+    
+    // 检查是否已发送过请求
+    const existingRequest = sentRequests.find(r => r.toUserId === toUserId);
+    if (existingRequest) {
+      alert('已发送过好友请求，等待对方回复');
+      return;
+    }
+
+    const newRequest: FriendRequest = {
+      id: Date.now(),
+      fromUserId: currentUser.id,
+      fromUsername: currentUser.username,
+      fromAvatar: currentUser.avatar,
+      toUserId,
+      status: 'pending',
+      timestamp: new Date().toISOString()
+    };
+
+    setSentRequests([...sentRequests, newRequest]);
+    alert(`已向 ${allFans.find(f => f.id === toUserId)?.username} 发送好友请求！`);
+  };
+
+  // 接受好友请求
+  const handleAcceptRequest = (requestId: number) => {
+    const request = friendRequests.find(r => r.id === requestId);
+    if (!request) return;
+
+    const newFriend: Friendship = {
+      userId: request.fromUserId,
+      username: request.fromUsername,
+      avatar: request.fromAvatar,
+      joinDate: allFans.find(f => f.id === request.fromUserId)?.joinDate || new Date().toISOString().split('T')[0],
+      becameFriendsDate: new Date().toISOString().split('T')[0]
+    };
+
+    setFriends([...friends, newFriend]);
+    setFriendRequests(friendRequests.filter(r => r.id !== requestId));
+  };
+
+  // 拒绝好友请求
+  const handleRejectRequest = (requestId: number) => {
+    setFriendRequests(friendRequests.filter(r => r.id !== requestId));
+  };
+
+  // 删除好友
+  const handleRemoveFriend = (userId: number) => {
+    setFriends(friends.filter(f => f.userId !== userId));
+  };
+
+  // 模拟接收好友请求（演示用途）
+  useEffect(() => {
+    if (currentUser && friendRequests.length === 0 && Math.random() > 0.8) {
+      const randomFan = allFans[Math.floor(Math.random() * allFans.length)];
+      if (randomFan.id !== currentUser.id && !friends.some(f => f.userId === randomFan.id)) {
+        const incomingRequest: FriendRequest = {
+          id: Date.now(),
+          fromUserId: randomFan.id,
+          fromUsername: randomFan.username,
+          fromAvatar: randomFan.avatar,
+          toUserId: currentUser.id,
+          status: 'pending',
+          timestamp: new Date().toISOString()
+        };
+        setFriendRequests([incomingRequest]);
+      }
+    }
+  }, [currentUser]);
+
+
   const t = TRANSLATIONS[lang];
 
   const [started, setStarted] = useState(false);
@@ -719,6 +1215,11 @@ export default function App() {
   
   const [comments, setComments] = useState(INITIAL_COMMENTS);
   const [newComment, setNewComment] = useState('');
+  
+  const [chatMessages, setChatMessages] = useState(INITIAL_CHAT_MESSAGES);
+  const [newChatMessage, setNewChatMessage] = useState('');
+  const [chatUsername, setChatUsername] = useState('');
+  const chatScrollRef = useRef<HTMLDivElement>(null);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -829,6 +1330,39 @@ export default function App() {
     setNewComment('');
   };
 
+  const handleAddChatMessage = (e: FormEvent) => {
+    e.preventDefault();
+    if (!newChatMessage.trim()) return;
+    
+    const currentTime = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const username = chatUsername.trim() || 'Anonymous Fan';
+    
+    const newMessage: ChatMessage = {
+      id: Date.now(),
+      author: username,
+      avatar: `https://api.dicebear.com/7.x/miniavs/svg?seed=${username}&backgroundColor=${['ffdfbf', 'ffc8dd', 'bbf7d0', 'bfdbfe', 'fef08a', 'fbcfe8', 'ddd6fe', 'fda4af'][Math.floor(Math.random() * 8)]}`,
+      text: newChatMessage,
+      time: currentTime,
+      color: ['from-[#ffe4e1]', 'from-[#ffb6c1]', 'from-[#fff0f5]', 'from-[#ffb3ba]'][Math.floor(Math.random() * 4)]
+    };
+    
+    setChatMessages([...chatMessages, newMessage]);
+    setNewChatMessage('');
+    
+    // Auto scroll to bottom
+    setTimeout(() => {
+      if (chatScrollRef.current) {
+        chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+      }
+    }, 0);
+  };
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
   const handleLike = (id: number) => {
     setComments(comments.map(c => {
       if (c.id === id) {
@@ -893,6 +1427,37 @@ export default function App() {
       className="h-[100dvh] w-full overflow-y-auto bg-white font-sans text-pink-900 scroll-smooth"
       ref={scrollContainerRef}
     >
+      {/* 登录模态框 */}
+      <AnimatePresence>
+        {showLoginModal && (
+          <UserLoginModal onLoginSuccess={handleUserLogin} />
+        )}
+      </AnimatePresence>
+
+      {/* 好友面板 */}
+      <AnimatePresence>
+        {showFriendsPanel && currentUser && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-24 right-4 z-[210] w-[95vw] md:w-[600px] max-h-[calc(100vh-200px)]"
+          >
+            <FriendsPanel
+              allFans={allFans}
+              friends={friends}
+              currentUser={currentUser}
+              friendRequests={friendRequests}
+              sentRequests={sentRequests}
+              onSendFriendRequest={handleSendFriendRequest}
+              onAcceptRequest={handleAcceptRequest}
+              onRejectRequest={handleRejectRequest}
+              onRemoveFriend={handleRemoveFriend}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {!started && (
           <motion.div
@@ -988,6 +1553,56 @@ export default function App() {
             <FanSiteBadge text={t.fanSite} />
           </div>
           <div className="flex gap-4 pointer-events-auto nav-menu-container relative">
+            {/* 用户信息显示 */}
+            {currentUser && (
+              <div className="flex items-center gap-2 bg-gradient-to-br from-green-100 to-green-50 border-2 border-green-300 px-4 py-2 rounded-full font-black text-sm">
+                <img 
+                  src={currentUser.avatar} 
+                  alt={currentUser.username}
+                  className="w-6 h-6 rounded-full border-2 border-green-300"
+                />
+                <span className="text-green-700 hidden sm:inline">{currentUser.username}</span>
+                <span className="text-green-700 text-xs">({friends.length})</span>
+              </div>
+            )}
+
+            {/* 好友面板按钮 */}
+            {currentUser && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowFriendsPanel(!showFriendsPanel)}
+                className="relative bg-gradient-to-br from-purple-200 to-purple-100 border-2 border-purple-300 px-4 py-2 rounded-full font-black text-sm flex items-center gap-2 hover:shadow-lg transition-all"
+              >
+                <Users className="w-5 h-5" />
+                粉丝圈
+                {friendRequests.length > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-black rounded-full w-5 h-5 flex items-center justify-center animate-bounce">
+                    {friendRequests.length}
+                  </span>
+                )}
+              </motion.button>
+            )}
+
+            {/* 退出登录按钮 */}
+            {currentUser && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  setCurrentUser(null);
+                  setShowLoginModal(true);
+                  setFriends([]);
+                  setFriendRequests([]);
+                  setSentRequests([]);
+                  setShowFriendsPanel(false);
+                }}
+                className="bg-gradient-to-br from-red-200 to-red-100 border-2 border-red-300 px-4 py-2 rounded-full font-black text-sm hover:shadow-lg transition-all"
+              >
+                <LogOut className="w-5 h-5" />
+              </motion.button>
+            )}
+
              <div className="relative">
                <button 
                  onClick={toggleLangMenu}
@@ -1028,6 +1643,7 @@ export default function App() {
                      <a href="#music" onClick={() => setMenuOpen(false)} className="px-4 py-2 hover:bg-pink-50 rounded-xl font-bold text-pink-900 transition-colors">{t.latest}</a>
                      <a href="#mv" onClick={() => setMenuOpen(false)} className="px-4 py-2 hover:bg-pink-50 rounded-xl font-bold text-pink-900 transition-colors">{t.mvPreview}</a>
                      <a href="#board" onClick={() => setMenuOpen(false)} className="px-4 py-2 hover:bg-pink-50 rounded-xl font-bold text-pink-900 transition-colors">{t.boardTitle}</a>
+                     <a href="#chat" onClick={() => setMenuOpen(false)} className="px-4 py-2 hover:bg-pink-50 rounded-xl font-bold text-pink-900 transition-colors">{t.chatChannel}</a>
                    </motion.div>
                  )}
                </AnimatePresence>
@@ -1508,6 +2124,135 @@ export default function App() {
                 ))}
 
               </AnimatePresence>
+           </div>
+        </div>
+      </section>
+
+      {/* PAGE 6: Fan Chat Channel */}
+      <section id="chat" className="min-h-[100dvh] w-full bg-gradient-to-br from-[#fef08a] to-[#fff0f5] pt-24 pb-32 flex flex-col items-center justify-start lg:justify-center relative overflow-x-hidden border-b-[8px] border-yellow-200">
+        
+        {/* Background Decorations */}
+        <div className="absolute inset-0 bg-polka opacity-10 pointer-events-none mix-blend-multiply"></div>
+        <div className="absolute top-20 right-10 opacity-20"><Users className="w-64 h-64 text-yellow-300 fill-yellow-300 transform rotate-12" /></div>
+        <div className="absolute bottom-20 left-10 opacity-20"><MessageCircle className="w-96 h-96 text-pink-200 fill-pink-200 transform -rotate-6" /></div>
+
+        <div className="w-full max-w-6xl px-4 md:px-8 z-10 flex flex-col items-center mb-8">
+           <h2 className="text-5xl md:text-8xl font-display font-black text-pink-950 tracking-tighter leading-none mb-4 transform rotate-0">{t.chatTitle}</h2>
+           <p className="text-xl md:text-2xl font-bold text-pink-950 mb-8 px-4 bg-white w-fit border-2 border-yellow-200 shadow-xl shadow-yellow-200 transform rotate-0">{t.chatSubtitle}</p>
+        </div>
+
+        <div className="w-full max-w-4xl px-4 md:px-8 z-10 grid grid-cols-1 lg:grid-cols-4 gap-6 h-[600px]">
+           
+           {/* Chat Messages Area */}
+           <div className="lg:col-span-3 flex flex-col rounded-[2rem] border-2 border-yellow-200 shadow-xl shadow-yellow-200 overflow-hidden bg-white/90 backdrop-blur-md">
+             {/* Chat Header */}
+             <div className="bg-gradient-to-r from-[#fef08a] to-[#fff0f5] border-b-2 border-yellow-200 px-6 md:px-8 py-4 flex items-center justify-between">
+               <div className="flex items-center gap-3">
+                 <MessageSquare className="w-6 h-6 text-pink-500" />
+                 <h3 className="font-display font-black text-lg md:text-xl text-pink-950">{t.chatChannel}</h3>
+               </div>
+               <div className="flex items-center gap-2 text-sm font-bold text-pink-600 bg-white px-3 py-1 rounded-full border border-yellow-200">
+                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                 {chatMessages.length + 3} {t.onlineUsers}
+               </div>
+             </div>
+
+             {/* Messages Container */}
+             <div 
+               ref={chatScrollRef}
+               className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 flex flex-col gap-4"
+             >
+               {chatMessages.map((msg, index) => (
+                 <motion.div 
+                   key={msg.id}
+                   initial={{ opacity: 0, y: 20 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   transition={{ type: "spring", stiffness: 300, damping: 24 }}
+                   className="flex gap-3 items-start"
+                 >
+                   <div className="w-10 h-10 rounded-full border-2 border-yellow-200 overflow-hidden shrink-0 shadow-md">
+                     <img src={msg.avatar} alt={msg.author} className="w-full h-full object-cover" />
+                   </div>
+                   <div className="flex-1">
+                     <div className="flex items-center gap-2 mb-1">
+                       <span className="font-bold text-pink-900 text-sm md:text-base">{msg.author}</span>
+                       <span className="text-xs text-stone-400 font-mono">{msg.time}</span>
+                     </div>
+                     <div className="bg-gradient-to-br from-yellow-50 to-pink-50 rounded-xl px-4 py-3 border border-yellow-200 shadow-md">
+                       <p className="text-stone-700 font-bold text-sm md:text-base leading-snug">{msg.text}</p>
+                     </div>
+                   </div>
+                 </motion.div>
+               ))}
+             </div>
+
+             {/* Message Input */}
+             <div className="border-t-2 border-yellow-200 bg-white/50 backdrop-blur-sm px-4 md:px-6 py-4">
+               <form onSubmit={handleAddChatMessage} className="flex flex-col gap-3">
+                 <input 
+                   type="text"
+                   value={chatUsername}
+                   onChange={(e) => setChatUsername(e.target.value)}
+                   placeholder="Your name (optional)"
+                   maxLength={20}
+                   className="w-full border-2 border-yellow-200 focus:border-yellow-400 rounded-xl px-4 py-2 text-pink-900 font-bold outline-none text-sm transition-all shadow-md"
+                 />
+                 <div className="flex gap-2">
+                   <input 
+                     type="text"
+                     value={newChatMessage}
+                     onChange={(e) => setNewChatMessage(e.target.value)}
+                     placeholder={t.chatPlaceholder} 
+                     maxLength={100}
+                     className="flex-1 border-2 border-yellow-200 focus:border-yellow-400 rounded-xl px-4 py-3 text-pink-900 font-bold outline-none text-sm md:text-base transition-all shadow-md"
+                   />
+                   <button 
+                     type="submit"
+                     disabled={!newChatMessage.trim()}
+                     className="bg-gradient-to-br from-[#fef08a] to-[#ffb3ba] border-2 border-yellow-200 text-pink-950 px-4 py-3 rounded-xl font-black shadow-xl shadow-yellow-200 hover:-translate-y-1 disabled:opacity-50 disabled:hover:translate-y-0 transition-all flex items-center justify-center"
+                   >
+                     <Send className="w-5 h-5 fill-slate-900" />
+                   </button>
+                 </div>
+               </form>
+             </div>
+           </div>
+
+           {/* Sidebar: Online Status & Quick Actions */}
+           <div className="lg:col-span-1 flex flex-col gap-4">
+             {/* Online Users */}
+             <div className="bg-white rounded-[2rem] border-2 border-yellow-200 shadow-xl shadow-yellow-200 p-4 md:p-6">
+               <h4 className="font-black text-pink-950 mb-4 flex items-center gap-2 text-sm md:text-base">
+                 <Users className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                 在线粉丝
+               </h4>
+               <div className="space-y-2">
+                 {['Mona_Love', 'Star_Fan', 'Happy_Smile', 'Dream_Chaser', 'Music_Lover'].map((name) => (
+                   <div key={name} className="flex items-center gap-2 text-xs md:text-sm font-bold">
+                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                     <span className="text-pink-900 truncate">{name}</span>
+                   </div>
+                 ))}
+               </div>
+             </div>
+
+             {/* Rules / Info */}
+             <div className="bg-gradient-to-br from-yellow-50 to-pink-50 rounded-[2rem] border-2 border-yellow-200 shadow-xl shadow-yellow-200 p-4 md:p-6">
+               <h4 className="font-black text-pink-950 mb-3 text-sm md:text-base">💬 聊天须知</h4>
+               <ul className="text-[10px] md:text-xs text-pink-900 font-bold space-y-1.5">
+                 <li>✨ 保持友善和尊重</li>
+                 <li>💕 分享对 Mona 的热爱</li>
+                 <li>🌟 互相鼓励和支持</li>
+                 <li>🎀 禁止骚扰和不当言语</li>
+               </ul>
+             </div>
+
+             {/* Mona Heart */}
+             <div className="bg-white rounded-[2rem] border-2 border-yellow-200 shadow-xl shadow-yellow-200 p-4 md:p-6 flex flex-col items-center justify-center text-center">
+               <Heart className="w-12 h-12 text-pink-500 fill-pink-500 mb-2 animate-pulse" />
+               <p className="text-[10px] md:text-xs font-black text-pink-950 uppercase">谢谢你们的</p>
+               <p className="text-[10px] md:text-xs font-black text-pink-500">热爱和支持!</p>
+             </div>
            </div>
         </div>
       </section>
