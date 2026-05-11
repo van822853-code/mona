@@ -1212,6 +1212,7 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [phoneRotated, setPhoneRotated] = useState(false);
   
   const [comments, setComments] = useState(INITIAL_COMMENTS);
   const [newComment, setNewComment] = useState('');
@@ -1254,7 +1255,12 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isPlaying, currentSong]);
 
-  const togglePlay = () => setIsPlaying(!isPlaying);
+  const togglePlay = () => {
+    if (!phoneRotated) {
+      setPhoneRotated(true);
+    }
+    setIsPlaying(!isPlaying);
+  };
 
   const playSong = (song: typeof SONGS[0]) => {
     if (currentSong.id === song.id) {
@@ -1664,73 +1670,119 @@ export default function App() {
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="w-full md:w-[40%] flex justify-center mt-8 md:mt-0 z-20"
+            className="w-full md:w-[40%] flex justify-center mt-8 md:mt-0 z-20 perspective"
           >
-            <div className="relative w-[340px] md:w-[380px] group transform rotate-0">
+            <motion.div 
+              animate={{ rotateZ: phoneRotated ? 90 : 0 }}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
+              className={`relative group ${phoneRotated ? 'w-[800px] h-[400px]' : 'w-[400px] md:w-[450px]'}`}
+              style={{ transformOrigin: 'center center' }}
+            >
                {/* Metal Frame & Shadow */}
                <div className="absolute inset-0 bg-slate-900 rounded-[3.5rem] shadow-[inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-4px_4px_rgba(0,0,0,0.5),0_20px_50px_rgba(0,0,0,0.5)] pointer-events-none"></div>
                {/* Outer Bezel (Black) */}
                <div className="absolute top-[3px] left-[3px] right-[3px] bottom-[3px] bg-black rounded-[3.3rem] pointer-events-none"></div>
                
                {/* Side Buttons */}
-               <div className="absolute top-[8rem] -left-[2px] w-[2px] h-8 bg-slate-700 rounded-l-md"></div>
-               <div className="absolute top-[11rem] -left-[2px] w-[2px] h-14 bg-slate-700 rounded-l-md"></div>
-               <div className="absolute top-[15.5rem] -left-[2px] w-[2px] h-14 bg-slate-700 rounded-l-md"></div>
-               <div className="absolute top-[13rem] -right-[2px] w-[3px] h-20 bg-slate-700 rounded-r-md"></div>
+               {!phoneRotated ? (
+                 <>
+                   <div className="absolute top-[8rem] -left-[2px] w-[2px] h-8 bg-slate-700 rounded-l-md"></div>
+                   <div className="absolute top-[11rem] -left-[2px] w-[2px] h-14 bg-slate-700 rounded-l-md"></div>
+                   <div className="absolute top-[15.5rem] -left-[2px] w-[2px] h-14 bg-slate-700 rounded-l-md"></div>
+                   <div className="absolute top-[13rem] -right-[2px] w-[3px] h-20 bg-slate-700 rounded-r-md"></div>
+                 </>
+               ) : (
+                 <>
+                   <div className="absolute left-[8rem] -top-[2px] h-[2px] w-8 bg-slate-700 rounded-t-md"></div>
+                   <div className="absolute left-[11rem] -top-[2px] h-[2px] w-14 bg-slate-700 rounded-t-md"></div>
+                   <div className="absolute left-[15.5rem] -top-[2px] h-[2px] w-14 bg-slate-700 rounded-t-md"></div>
+                   <div className="absolute left-[13rem] -bottom-[2px] h-[3px] w-20 bg-slate-700 rounded-b-md"></div>
+                 </>
+               )}
                
                {/* Screen Context */}
-               <div className="relative mt-[12px] mx-[12px] mb-[12px] bg-white rounded-[2.8rem] overflow-hidden flex flex-col pt-12 pb-8 px-6 shadow-[inset_0_0_20px_rgba(0,0,0,0.05)] pointer-events-auto z-10 transition-transform h-[680px]">
+               <div className={`relative ${phoneRotated ? 'mt-[12px] mx-[12px] mb-[12px]' : 'mt-[12px] mx-[12px] mb-[12px]'} bg-black rounded-[2.8rem] overflow-hidden flex flex-col shadow-[inset_0_0_20px_rgba(0,0,0,0.05)] pointer-events-auto z-10 transition-transform ${phoneRotated ? 'h-[376px]' : 'h-[752px]'}`}>
                  
-                 {/* Internal iPhone 14 Notch */}
-                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150px] h-[30px] bg-black rounded-b-[1.2rem] z-50 flex justify-center items-center pb-1">
-                   {/* Speaker cutout */}
-                   <div className="w-16 h-1.5 bg-[#1a1a1a] rounded-full"></div>
-                   {/* Camera lens */}
-                   <div className="absolute right-4 w-3 h-3 bg-[#0a0f1e] rounded-full border border-[#1e293b] flex items-center justify-center">
-                     <div className="w-1 h-1 bg-blue-900/50 rounded-full"></div>
-                   </div>
-                 </div>
-               
-               <div className="mt-8 flex justify-between items-center mb-6 px-2">
-                 <div>
-                   <h3 className="font-black text-2xl font-display tracking-tight leading-none text-pink-500">Mona For You！</h3>
-                   <p className="text-xs text-slate-500 font-bold tracking-widest uppercase mt-1">{t.producer}</p>
-                 </div>
-                 <div className="bg-gradient-to-br from-[#ffe4e1] to-[#ffb6c1] p-2 rounded-full border-2 border-pink-100 shadow-xl shadow-pink-100 animate-pulse">
-                   <Heart className="w-5 h-5 text-pink-950 fill-slate-900" />
-                 </div>
-               </div>
-               
-               <div className="w-full aspect-square bg-slate-100 rounded-2xl border-2 border-pink-100 overflow-hidden relative shadow-inner group-hover:shadow-xl shadow-pink-100 transition-all">
-                  <img src={currentSong.cover} className="w-full h-full object-cover" alt="Playing" />
-                  
-                  <div className="absolute inset-0 bg-pink-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                    <button 
-                      onClick={togglePlay} 
-                      className="w-20 h-20 bg-gradient-to-br from-[#fff0f5] to-[#ffe4e1] text-pink-950 rounded-full border-2 border-pink-100 flex items-center justify-center shadow-xl shadow-pink-100 transform hover:scale-110 active:translate-y-1 active:shadow-xl shadow-pink-100 transition-all"
-                    >
-                      {isPlaying ? <Pause className="w-8 h-8 fill-slate-900" /> : <Play className="w-8 h-8 ml-1 fill-slate-900" />}
-                    </button>
-                  </div>
-               </div>
-               
-               <div className="mt-6 px-2 text-center h-20">
-                 <p className="font-bold text-lg text-pink-950 line-clamp-1">{t.songs[SONGS.findIndex(s => s.id === currentSong.id)].title}</p>
-                 <p className="text-sm text-pink-500 font-bold mt-1 line-clamp-1">{t.songs[SONGS.findIndex(s => s.id === currentSong.id)].tag}</p>
-               </div>
+                 {!phoneRotated ? (
+                   <>
+                     {/* Vertical Screen Content */}
+                     {/* Internal iPhone 14 Notch */}
+                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150px] h-[30px] bg-black rounded-b-[1.2rem] z-50 flex justify-center items-center pb-1">
+                       {/* Speaker cutout */}
+                       <div className="w-16 h-1.5 bg-[#1a1a1a] rounded-full"></div>
+                       {/* Camera lens */}
+                       <div className="absolute right-4 w-3 h-3 bg-[#0a0f1e] rounded-full border border-[#1e293b] flex items-center justify-center">
+                         <div className="w-1 h-1 bg-blue-900/50 rounded-full"></div>
+                       </div>
+                     </div>
+                   
+                     <div className="relative bg-white rounded-[2.8rem] overflow-hidden flex flex-col pt-12 pb-8 px-6 h-full">
+                       <div className="mt-8 flex justify-between items-center mb-6 px-2">
+                         <div>
+                           <h3 className="font-black text-2xl font-display tracking-tight leading-none text-pink-500">Mona For You！</h3>
+                           <p className="text-xs text-slate-500 font-bold tracking-widest uppercase mt-1">{t.producer}</p>
+                         </div>
+                         <div className="bg-gradient-to-br from-[#ffe4e1] to-[#ffb6c1] p-2 rounded-full border-2 border-pink-100 shadow-xl shadow-pink-100 animate-pulse">
+                           <Heart className="w-5 h-5 text-pink-950 fill-slate-900" />
+                         </div>
+                       </div>
+                       
+                       <div className="w-full aspect-square bg-slate-100 rounded-2xl border-2 border-pink-100 overflow-hidden relative shadow-inner group-hover:shadow-xl shadow-pink-100 transition-all">
+                          <img src={currentSong.cover} className="w-full h-full object-cover" alt="Playing" />
+                          
+                          <div className="absolute inset-0 bg-pink-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                            <button 
+                              onClick={togglePlay} 
+                              className="w-20 h-20 bg-gradient-to-br from-[#fff0f5] to-[#ffe4e1] text-pink-950 rounded-full border-2 border-pink-100 flex items-center justify-center shadow-xl shadow-pink-100 transform hover:scale-110 active:translate-y-1 active:shadow-xl shadow-pink-100 transition-all"
+                            >
+                              <Play className="w-8 h-8 ml-1 fill-slate-900" />
+                            </button>
+                          </div>
+                       </div>
+                       
+                       <div className="mt-6 px-2 text-center h-20">
+                         <p className="font-bold text-lg text-pink-950 line-clamp-1">{t.songs[SONGS.findIndex(s => s.id === currentSong.id)].title}</p>
+                         <p className="text-sm text-pink-500 font-bold mt-1 line-clamp-1">{t.songs[SONGS.findIndex(s => s.id === currentSong.id)].tag}</p>
+                       </div>
 
-               <div className="w-full bg-slate-200 h-3 rounded-full border-2 border-pink-100 overflow-hidden mt-4 shadow-inner">
-                  <div 
-                    className="h-full bg-gradient-to-br from-[#ffe4e1] to-[#ffb6c1] transition-all duration-1000 ease-linear border-r-2 border-pink-200"
-                    style={{ width: `${(progress / currentSong.duration) * 100}%` }}
-                  />
-               </div>
-               
-               {/* iPhone Home Indicator line */}
-               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-slate-300 rounded-full"></div>
-               
+                       <div className="w-full bg-slate-200 h-3 rounded-full border-2 border-pink-100 overflow-hidden mt-4 shadow-inner">
+                          <div 
+                            className="h-full bg-gradient-to-br from-[#ffe4e1] to-[#ffb6c1] transition-all duration-1000 ease-linear border-r-2 border-pink-200"
+                            style={{ width: `${(progress / currentSong.duration) * 100}%` }}
+                          />
+                       </div>
+                       
+                       {/* iPhone Home Indicator line */}
+                       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-slate-300 rounded-full"></div>
+                     </div>
+                   </>
+                 ) : (
+                   <>
+                     {/* Horizontal Screen - Bilibili Video Player */}
+                     <div className="relative bg-black rounded-[2.8rem] overflow-hidden flex flex-col w-full h-full">
+                       {/* Notch for landscape */}
+                       <div className="absolute top-0 left-[3rem] h-[30px] w-[60px] bg-black rounded-b-[1rem] z-50"></div>
+                       
+                       {/* Bilibili Video Player */}
+                       <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
+                         <iframe 
+                           src="//player.bilibili.com/player.html?isOutside=true&aid=115564936761347&bvid=BV1dYCqBqEFY&cid=34070200585&p=1" 
+                           scrolling="no" 
+                           border="0" 
+                           frameBorder="no" 
+                           framespacing="0" 
+                           allowFullScreen={true}
+                           className="w-full h-full rounded-[2.8rem]"
+                         ></iframe>
+                       </div>
+                       
+                       {/* Landscape Home Indicator */}
+                       <div className="absolute bottom-1 right-1 w-24 h-1 bg-slate-300 rounded-full"></div>
+                     </div>
+                   </>
+                 )}
                </div> {/* Screen Context End */}
-            </div>
+            </motion.div>
           </motion.div>
 
           </div>
@@ -1964,21 +2016,33 @@ export default function App() {
           {/* Horizontal Scrolling MV Container */}
           <div className="flex overflow-x-auto gap-8 pb-12 pt-4 snap-x snap-mandatory hide-scrollbar">
             {[
-              { id: 'Fz036w08RDE', title: '私、アイドル宣言', date: '2018.02.10', tag: 'OFFICIAL MV' },
-              { id: '1bWYBxa2R1s', title: 'ファンサ', date: '2019.06.21', tag: 'OFFICIAL MV' },
-              { id: 'yY7Gg7F4Xl0', title: '誇り高きアイドル', date: '2021.05.28', tag: 'OFFICIAL MV' },
-              { id: '6aF9BfLDBrY', title: '人生は最高の暇つぶし', date: '2020.12.26', tag: 'OFFICIAL MV' },
+              { id: '114959077874158', title: '私、アイドル宣言', date: '2018.02.10', tag: 'OFFICIAL MV', type: 'bilibili', bvid: 'BV1mohbzRE4e', cid: '31444174262' },
+              { id: '114925456334635', title: 'ファンサ', date: '2019.06.21', tag: 'OFFICIAL MV', type: 'bilibili', bvid: 'BV1mv8gzPEEq', cid: '31337546238' },
+              { id: '870511199', title: '誇り高きアイドル', date: '2021.05.28', tag: 'OFFICIAL MV', type: 'bilibili', bvid: 'BV1vV4y1a7vF', cid: '1186226495' },
+              { id: '371899465', title: '人生は最高の暇つぶし', date: '2020.12.26', tag: 'OFFICIAL MV', type: 'bilibili', bvid: 'BV1KZ4y1T7X9', cid: '228884075' },
             ].map((mv, index) => (
               <div key={index} className="flex-none w-[85vw] md:w-[60vw] lg:w-[45vw] snap-center">
                 <div className="bg-white border-4 border-pink-900 rounded-[2rem] overflow-hidden shadow-[8px_8px_0px_#831843] group relative hover:translate-x-[-4px] hover:translate-y-[-4px] hover:shadow-[12px_12px_0px_#831843] transition-all duration-300">
                   <div className="relative aspect-video w-full bg-slate-900">
-                    <Player
-                      url={`https://www.youtube.com/watch?v=${mv.id}`}
-                      width="100%"
-                      height="100%"
-                      controls={true}
-                      light={true}
-                    />
+                    {mv.type === 'bilibili' ? (
+                      <iframe 
+                        src={`//player.bilibili.com/player.html?isOutside=true&aid=${mv.id}&bvid=${mv.bvid}&cid=${mv.cid}&p=1`}
+                        scrolling="no" 
+                        border="0" 
+                        frameBorder="no" 
+                        framespacing="0" 
+                        allowFullScreen={true}
+                        className="w-full h-full"
+                      ></iframe>
+                    ) : (
+                      <Player
+                        url={`https://www.youtube.com/watch?v=${mv.id}`}
+                        width="100%"
+                        height="100%"
+                        controls={true}
+                        light={true}
+                      />
+                    )}
                   </div>
                   <div className="p-6 bg-yellow-50 border-t-4 border-pink-900 flex justify-between items-center gap-4">
                     <div>
