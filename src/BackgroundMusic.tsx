@@ -4,31 +4,67 @@ import { Volume2, VolumeX } from 'lucide-react';
 export default function BackgroundMusic({ forcePlay = false }: { forcePlay?: boolean }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const fadeInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (forcePlay && audioRef.current && !isPlaying) {
-      audioRef.current.play().catch(err => console.log("Auto-play blocked", err));
-      setIsPlaying(true);
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (fadeInterval.current) {
+      clearInterval(fadeInterval.current);
+      fadeInterval.current = null;
     }
+
+    if (forcePlay) {
+      audio.volume = 0;
+      audio.play().catch(err => console.log("Auto-play blocked", err));
+      setIsPlaying(true);
+      fadeInterval.current = setInterval(() => {
+        if (!audio) return;
+        const nextVolume = Math.min(audio.volume + 0.02, 0.3);
+        audio.volume = nextVolume;
+        if (nextVolume >= 0.3 && fadeInterval.current) {
+          clearInterval(fadeInterval.current);
+          fadeInterval.current = null;
+        }
+      }, 100);
+    } else {
+      if (!audio.paused) {
+        audio.pause();
+      }
+      audio.volume = 0;
+      setIsPlaying(false);
+    }
+
+    return () => {
+      if (fadeInterval.current) {
+        clearInterval(fadeInterval.current);
+        fadeInterval.current = null;
+      }
+    };
   }, [forcePlay]);
 
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = 0.3;
-    }
-  }, []);
-
   const togglePlay = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play().catch(err => {
-          console.error("Playback failed:", err);
-        });
-      }
-      setIsPlaying(!isPlaying);
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      audioRef.current.volume = 0;
+    } else {
+      audioRef.current.volume = 0;
+      audioRef.current.play().catch(err => {
+        console.error("Playback failed:", err);
+      });
+      const audio = audioRef.current;
+      const fadeSender = setInterval(() => {
+        if (!audio) return;
+        const nextVolume = Math.min(audio.volume + 0.02, 0.3);
+        audio.volume = nextVolume;
+        if (nextVolume >= 0.3) {
+          clearInterval(fadeSender);
+        }
+      }, 100);
     }
+    setIsPlaying(!isPlaying);
   };
 
   return (

@@ -367,11 +367,11 @@ const INITIAL_COMMENTS: CommentType[] = [
 ];
 
 const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
-  { id: 1, author: 'Mona_Love', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=MonaLove&backgroundColor=ffdfbf', text: '大家好呀！今天也要开心哦～✨', time: '10:30' },
-  { id: 2, author: 'Star_Fan', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=StarFan&backgroundColor=ffc8dd', text: 'Mona酱今天的直播太棒了！', time: '10:45' },
-  { id: 3, author: 'Happy_Smile', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Happy&backgroundColor=bbf7d0', text: '新歌出来了吗？等不及了～', time: '11:00' },
-  { id: 4, author: 'Dream_Chaser', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Dream&backgroundColor=bfdbfe', text: '大家支持Mona，我们一起加油！💪', time: '11:15' },
-  { id: 5, author: 'Music_Lover', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Music&backgroundColor=fef08a', text: '这个频道真的很温暖呢～', time: '11:30' },
+  { id: 1, author: 'Mona_Love', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=MonaLove&backgroundColor=ffdfbf', text: '大家好呀！今天也要开心哦～✨', time: '10:30', color: '#ffdfbf' },
+  { id: 2, author: 'Star_Fan', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=StarFan&backgroundColor=ffc8dd', text: 'Mona酱今天的直播太棒了！', time: '10:45', color: '#ffc8dd' },
+  { id: 3, author: 'Happy_Smile', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Happy&backgroundColor=bbf7d0', text: '新歌出来了吗？等不及了～', time: '11:00', color: '#bbf7d0' },
+  { id: 4, author: 'Dream_Chaser', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Dream&backgroundColor=bfdbfe', text: '大家支持Mona，我们一起加油！💪', time: '11:15', color: '#bfdbfe' },
+  { id: 5, author: 'Music_Lover', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=Music&backgroundColor=fef08a', text: '这个频道真的很温暖呢～', time: '11:30', color: '#fef08a' },
 ];
 
 // 初始粉丝列表
@@ -1213,8 +1213,8 @@ export default function App() {
   const [progress, setProgress] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [phoneRotated, setPhoneRotated] = useState(false);
-  
   const [comments, setComments] = useState(INITIAL_COMMENTS);
+
   const [newComment, setNewComment] = useState('');
   
   const [chatMessages, setChatMessages] = useState(INITIAL_CHAT_MESSAGES);
@@ -1224,7 +1224,6 @@ export default function App() {
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const [bgmPlaying, setBgmPlaying] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -1423,11 +1422,6 @@ export default function App() {
     }
   };
 
-  // Background Audio Control
-  const toggleBgm = () => {
-    setBgmPlaying(!bgmPlaying);
-  };
-
   return (
     <div 
       className="h-[100dvh] w-full overflow-y-auto bg-white font-sans text-pink-900 scroll-smooth"
@@ -1471,7 +1465,6 @@ export default function App() {
             className="fixed inset-0 bg-gradient-to-br from-[#ffe4e1] to-[#ffb6c1] z-[200] flex flex-col items-center justify-center cursor-pointer backdrop-blur-sm"
             onClick={() => {
               setStarted(true);
-              setBgmPlaying(true);
             }}
           >
             <FallingStars />
@@ -1534,7 +1527,7 @@ export default function App() {
         )}
       </AnimatePresence>
       
-      <BackgroundMusic forcePlay={started} />
+      <BackgroundMusic forcePlay={started && !isPlaying} />
 
       {/* Top Ticker Banner */}
       <div className="fixed top-0 w-full z-50 bg-pink-300 text-white text-xs md:text-sm font-bold py-2 px-4 shadow-xl shadow-pink-100 border-b-4 border-pink-200 pointer-events-none">
@@ -1766,14 +1759,21 @@ export default function App() {
                        {/* Bilibili Video Player */}
                        <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
                          <iframe 
-                           src="//player.bilibili.com/player.html?isOutside=true&aid=115564936761347&bvid=BV1dYCqBqEFY&cid=34070200585&p=1" 
+                           src={`//player.bilibili.com/player.html?isOutside=true&aid=115564936761347&bvid=BV1dYCqBqEFY&cid=34070200585&p=1&autoplay=${isPlaying ? 1 : 0}`}
                            scrolling="no" 
-                           border="0" 
                            frameBorder="no" 
-                           framespacing="0" 
                            allowFullScreen={true}
                            className="w-full h-full rounded-[2.8rem]"
+                           style={{ border: 0 }}
                          ></iframe>
+                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                           <button
+                             onClick={togglePlay}
+                             className="pointer-events-auto w-20 h-20 bg-white/90 text-pink-900 rounded-full border-2 border-pink-200 shadow-xl shadow-pink-100 flex items-center justify-center transition-transform hover:scale-110 active:translate-y-1"
+                           >
+                             {isPlaying ? <Pause className="w-8 h-8 fill-pink-900" /> : <Play className="w-8 h-8 fill-pink-900" />}
+                           </button>
+                         </div>
                        </div>
                        
                        {/* Landscape Home Indicator */}
@@ -2028,11 +2028,10 @@ export default function App() {
                       <iframe 
                         src={`//player.bilibili.com/player.html?isOutside=true&aid=${mv.id}&bvid=${mv.bvid}&cid=${mv.cid}&p=1`}
                         scrolling="no" 
-                        border="0" 
                         frameBorder="no" 
-                        framespacing="0" 
                         allowFullScreen={true}
                         className="w-full h-full"
+                        style={{ border: 0 }}
                       ></iframe>
                     ) : (
                       <Player
