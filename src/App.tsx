@@ -1220,6 +1220,7 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState(INITIAL_CHAT_MESSAGES);
   const [newChatMessage, setNewChatMessage] = useState('');
   const [chatUsername, setChatUsername] = useState('');
+  const [playingMVId, setPlayingMVId] = useState<string | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -1668,7 +1669,7 @@ export default function App() {
             <motion.div 
               animate={{ rotateZ: phoneRotated ? 90 : 0 }}
               transition={{ duration: 0.6, ease: "easeInOut" }}
-              className={`relative group ${phoneRotated ? 'w-[800px] h-[400px]' : 'w-[400px] md:w-[450px]'}`}
+              className="relative group w-[400px] md:w-[450px]"
               style={{ transformOrigin: 'center center' }}
             >
                {/* Metal Frame & Shadow */}
@@ -1694,7 +1695,7 @@ export default function App() {
                )}
                
                {/* Screen Context */}
-               <div className={`relative ${phoneRotated ? 'mt-[12px] mx-[12px] mb-[12px]' : 'mt-[12px] mx-[12px] mb-[12px]'} bg-black rounded-[2.8rem] overflow-hidden flex flex-col shadow-[inset_0_0_20px_rgba(0,0,0,0.05)] pointer-events-auto z-10 transition-transform ${phoneRotated ? 'h-[376px]' : 'h-[752px]'}`}>
+               <div className="relative mt-[12px] mx-[12px] mb-[12px] bg-black rounded-[2.8rem] overflow-hidden flex flex-col shadow-[inset_0_0_20px_rgba(0,0,0,0.05)] pointer-events-auto z-10 transition-transform h-[752px]">
                  
                  {!phoneRotated ? (
                    <>
@@ -1710,6 +1711,7 @@ export default function App() {
                      </div>
                    
                      <div className="relative bg-white rounded-[2.8rem] overflow-hidden flex flex-col pt-12 pb-8 px-6 h-full">
+
                        <div className="mt-8 flex justify-between items-center mb-6 px-2">
                          <div>
                            <h3 className="font-black text-2xl font-display tracking-tight leading-none text-pink-500">Mona For You！</h3>
@@ -1780,6 +1782,7 @@ export default function App() {
                        <div className="absolute bottom-1 right-1 w-24 h-1 bg-slate-300 rounded-full"></div>
                      </div>
                    </>
+
                  )}
                </div> {/* Screen Context End */}
             </motion.div>
@@ -2023,16 +2026,25 @@ export default function App() {
             ].map((mv, index) => (
               <div key={index} className="flex-none w-[85vw] md:w-[60vw] lg:w-[45vw] snap-center">
                 <div className="bg-white border-4 border-pink-900 rounded-[2rem] overflow-hidden shadow-[8px_8px_0px_#831843] group relative hover:translate-x-[-4px] hover:translate-y-[-4px] hover:shadow-[12px_12px_0px_#831843] transition-all duration-300">
-                  <div className="relative aspect-video w-full bg-slate-900">
+                  <div className="relative aspect-video w-full bg-slate-900 group/video">
                     {mv.type === 'bilibili' ? (
-                      <iframe 
-                        src={`//player.bilibili.com/player.html?isOutside=true&aid=${mv.id}&bvid=${mv.bvid}&cid=${mv.cid}&p=1`}
-                        scrolling="no" 
-                        frameBorder="no" 
-                        allowFullScreen={true}
-                        className="w-full h-full"
-                        style={{ border: 0 }}
-                      ></iframe>
+                      <>
+                        <iframe 
+                          src={`//player.bilibili.com/player.html?isOutside=true&aid=${mv.id}&bvid=${mv.bvid}&cid=${mv.cid}&p=1&autoplay=${playingMVId === mv.id ? 1 : 0}`}
+                          scrolling="no" 
+                          frameBorder="no" 
+                          allowFullScreen={true}
+                          className="w-full h-full"
+                          style={{ border: 0 }}
+                        ></iframe>
+                        {playingMVId !== mv.id && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover/video:bg-black/50 transition-all cursor-pointer" onClick={() => setPlayingMVId(mv.id)}>
+                            <button className="w-16 h-16 bg-white/90 rounded-full border-2 border-white shadow-xl flex items-center justify-center hover:bg-white transition-colors">
+                              <Play className="w-6 h-6 fill-pink-600 text-pink-600 ml-1" />
+                            </button>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <Player
                         url={`https://www.youtube.com/watch?v=${mv.id}`}
