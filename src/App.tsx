@@ -1668,15 +1668,22 @@ export default function App() {
             style={{ perspective: '1000px' }}
           >
             <motion.div 
-              animate={{ rotateZ: phoneRotated ? 90 : 0 }}
+              animate={{ 
+                rotateZ: phoneRotated ? 90 : 0,
+                x: phoneRotated ? -80 : 0
+              }}
               transition={{ duration: 0.6, ease: "easeInOut" }}
               className="relative group w-[280px] sm:w-[350px] md:w-[400px] lg:w-[450px] max-h-[85vh] flex items-center justify-center"
               style={{ transformOrigin: 'center center' }}
             >
-               {/* Metal Frame & Shadow */}
-               <div className="absolute inset-0 bg-slate-900 rounded-[3.5rem] shadow-[inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-4px_4px_rgba(0,0,0,0.5),0_20px_50px_rgba(0,0,0,0.5)] pointer-events-none"></div>
-               {/* Outer Bezel (Black) */}
-               <div className="absolute top-[3px] left-[3px] right-[3px] bottom-[3px] bg-black rounded-[3.3rem] pointer-events-none"></div>
+               {/* Metal Frame & Shadow - Hidden when rotated */}
+               <div className={`absolute inset-0 bg-slate-900 rounded-[3.5rem] shadow-[inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-4px_4px_rgba(0,0,0,0.5),0_20px_50px_rgba(0,0,0,0.5)] pointer-events-none transition-opacity ${
+                 phoneRotated ? 'opacity-0' : 'opacity-100'
+               }`}></div>
+               {/* Outer Bezel (Black) - Hidden when rotated */}
+               <div className={`absolute top-[3px] left-[3px] right-[3px] bottom-[3px] bg-black rounded-[3.3rem] pointer-events-none transition-opacity ${
+                 phoneRotated ? 'opacity-0' : 'opacity-100'
+               }`}></div>
                
                {/* Side Buttons */}
                {!phoneRotated ? (
@@ -1696,7 +1703,11 @@ export default function App() {
                )}
                
                {/* Screen Context */}
-               <div className="relative mt-[12px] mx-[12px] mb-[12px] bg-black rounded-[2.8rem] overflow-hidden flex flex-col shadow-[inset_0_0_20px_rgba(0,0,0,0.05)] pointer-events-auto z-10 transition-transform h-[752px] w-full">
+               <div className={`relative mt-[12px] mx-[12px] mb-[12px] rounded-[2.8rem] overflow-hidden flex flex-col pointer-events-auto z-10 transition-all h-[752px] w-full ${
+                 phoneRotated 
+                   ? 'bg-black shadow-[0_20px_50px_rgba(0,0,0,0.5)]' 
+                   : 'bg-black shadow-[inset_0_0_20px_rgba(0,0,0,0.05)]'
+               }`}>
                  
                  {!phoneRotated ? (
                    <>
