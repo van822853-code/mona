@@ -1652,7 +1652,7 @@ export default function App() {
         </div>
 
         {/* Central Graphic Composition */}
-        <div className="relative w-full max-w-7xl px-4 flex flex-col md:flex-row items-center justify-center gap-12 z-10 scale-90 md:scale-100 mt-8">
+        <div className="relative w-full max-w-7xl px-4 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12 z-10 scale-75 sm:scale-90 md:scale-100 mt-4 md:mt-8">
           
           {/* Mona Live2D Interactive Character */}
           <div className="w-full md:w-[60%] flex items-center justify-center pointer-events-auto z-20">
@@ -1664,12 +1664,13 @@ export default function App() {
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="w-full md:w-[40%] flex justify-center mt-8 md:mt-0 z-20 perspective"
+            className="w-full md:w-[40%] flex justify-center items-center mt-4 md:mt-0 z-20 perspective overflow-hidden"
+            style={{ perspective: '1000px' }}
           >
             <motion.div 
               animate={{ rotateZ: phoneRotated ? 90 : 0 }}
               transition={{ duration: 0.6, ease: "easeInOut" }}
-              className="relative group w-[400px] md:w-[450px]"
+              className="relative group w-[280px] sm:w-[350px] md:w-[400px] lg:w-[450px] max-h-[85vh] flex items-center justify-center"
               style={{ transformOrigin: 'center center' }}
             >
                {/* Metal Frame & Shadow */}
@@ -1695,7 +1696,7 @@ export default function App() {
                )}
                
                {/* Screen Context */}
-               <div className="relative mt-[12px] mx-[12px] mb-[12px] bg-black rounded-[2.8rem] overflow-hidden flex flex-col shadow-[inset_0_0_20px_rgba(0,0,0,0.05)] pointer-events-auto z-10 transition-transform h-[752px]">
+               <div className="relative mt-[12px] mx-[12px] mb-[12px] bg-black rounded-[2.8rem] overflow-hidden flex flex-col shadow-[inset_0_0_20px_rgba(0,0,0,0.05)] pointer-events-auto z-10 transition-transform h-[752px] w-full">
                  
                  {!phoneRotated ? (
                    <>
